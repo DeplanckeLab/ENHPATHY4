@@ -9,7 +9,7 @@ EPFL course by Vincent Gardeux
 
 In recent years, single-cell transcriptomics has become a widely used technology to study heterogeneous and dynamic biological systems. A large number of new tools and approaches have been developed for analyzing this new type of data.
 
-The goal of this exercise session is to provide theoretical and mostly hands-on knowledge in single-cell analysis.
+The goal of this hands-on session is to provide theoretical and practical knowledge in the basic analysis of single-cell RNA-seq datasets.
 
 This course covers the standard analysis of a single-cell RNA-seq dataset using the Seurat pipeline.
 It follows to some extent the ["standard tutorial from Seurat"](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html), which we encourage the readers to consult when they want to dive more into single-cell data analyis.
