@@ -145,6 +145,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 
 
+<link rel="stylesheet" href="data:text/css,%0Abody%7B%0Afont%2Dfamily%3A%20Arial%3B%0Afont%2Dsize%3A%2012pt%3B%0A%7D%0A%0Ah1%2Ch2%2Ch3%2Ch4%2Ch5%2Ch6%7B%0Afont%2Dsize%3A%2020pt%3B%0A%7D%0A%2Eauthor%7B%0Afont%2Dstyle%3A%20italic%3B%0Afont%2Dfamily%3A%20Arial%3B%0Afont%2Dsize%3A%2012pt%3B%0A%7D%0A%2Edate%7B%0Afont%2Dstyle%3A%20italic%3B%0Afont%2Dfamily%3A%20Arial%3B%0Afont%2Dsize%3A%2012pt%3B%0A%7D%0A%2Etitle%7B%0Afont%2Dstyle%3A%20bold%3B%0Afont%2Dfamily%3A%20Arial%3B%0Afont%2Dsize%3A%2022pt%3B%20%21important%0A%7D" type="text/css" />
 
 
 
@@ -336,17 +337,21 @@ div.tocify {
 
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
-<p>This course covers the standard analysis of a single-cell RNA-seq dataset using the Seurat pipeline. It follows to some extent the <a href="https://satijalab.org/seurat/articles/pbmc3k_tutorial.html">“standard tutorial from Seurat”</a>, which we encourage the readers to consult when they want to dive more into single-cell data analyis.</p>
-<p>In this course, we will use an example data set consisting of 7,000 cells from the <a href="https://flycellatlas.org/">“Fly Cell Atlas”</a> repository. These cells all come from the <strong>Body</strong> part, which was dissociated as a whole and sequenced using 10x Genomics technology over 10 batches, mixing males and females.</p>
+<p>This course covers the standard analysis of a single-cell RNA-seq dataset using the Seurat pipeline. It follows to some extent the <a href="https://satijalab.org/seurat/articles/pbmc3k_tutorial.html">standard tutorial from Seurat</a>, which we encourage the readers to consult when they want to dive more into single-cell data analyis.</p>
+<p>In this course, we will use an example data set consisting of 7,000 cells from the <a href="https://flycellatlas.org/">Fly Cell Atlas</a> repository. These cells all come from the <strong>Body</strong> part, which was dissociated as a whole and sequenced using 10x Genomics technology over 10 batches, mixing males and females.</p>
 <p>This set of 7,000 cells was carefully selected/filtered from the original <strong>Body dataset</strong> that consists of 96,926 cells. They belong to <em>a certain number</em> of differently annotated cell types.</p>
 <p>The goal of this exercise session is to:</p>
 <ol style="list-style-type: decimal">
 <li>Find out how many cell types there are in the data set</li>
-<li>Annotate the cell types using FlyEnrichr (<a href="https://maayanlab.cloud/FlyEnrichr/" class="uri">https://maayanlab.cloud/FlyEnrichr/</a>)</li>
+<li>Annotate the cell types using <a href="https://maayanlab.cloud/FlyEnrichr/">FlyEnrichr</a></li>
 </ol>
 </div>
-<div id="step-1-loading-the-data-and-create-a-seurat-object" class="section level1">
-<h1>Step 1: Loading the data and create a Seurat object</h1>
+<div id="loading-the-data-and-create-a-seurat-object" class="section level1">
+<h1>1. Loading the data and create a Seurat object</h1>
+<p>First, you need to download the dataset from the GitHub repository: <a href="https://github.com/DeplanckeLab/ENHPATHY4/blob/main/project_files/data.ENHPATHY.drosophila.melanogaster.txt.gz?raw=true">data.ENHPATHY.drosophila.melanogaster.txt.gz</a> and store it on your computer, in a <strong>path</strong> that you will remember for the next script.</p>
+<blockquote>
+<p>You don’t need to unzip it for the script to run. But it’s a good practice in general to check a file (format, content, headers) before trying to load it in R</p>
+</blockquote>
 <p>To be able to run the Seurat pipeline, you need to create a Seurat object in R. This step mainly depends on the format of the data you have, to start with. For example:</p>
 <ol style="list-style-type: decimal">
 <li>If coming from GEO, or other repositories, it could be in “.txt”, “.tsv”, … i.e. in a TEXT format</li>

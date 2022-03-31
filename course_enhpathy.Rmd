@@ -10,6 +10,7 @@ output:
     toc_float: true
     toc_collapsed: true
     theme: lumen
+    css: style.css
     fig_width: 5
 editor_options: 
   chunk_output_type: console
@@ -24,18 +25,22 @@ BiocStyle::markdown()
 # Introduction
 
 This course covers the standard analysis of a single-cell RNA-seq dataset using the Seurat pipeline.
-It follows to some extent the ["standard tutorial from Seurat"](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html), which we encourage the readers to consult when they want to dive more into single-cell data analyis.
+It follows to some extent the [standard tutorial from Seurat](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html), which we encourage the readers to consult when they want to dive more into single-cell data analyis.
 
-In this course, we will use an example data set consisting of 7,000 cells from the ["Fly Cell Atlas"](https://flycellatlas.org/) repository. These cells all come from the **Body** part, which was dissociated as a whole and sequenced using 10x Genomics technology over 10 batches, mixing males and females.
+In this course, we will use an example data set consisting of 7,000 cells from the [Fly Cell Atlas](https://flycellatlas.org/) repository. These cells all come from the **Body** part, which was dissociated as a whole and sequenced using 10x Genomics technology over 10 batches, mixing males and females.
 
 This set of 7,000 cells was carefully selected/filtered from the original **Body dataset** that consists of 96,926 cells. They belong to *a certain number* of differently annotated cell types.
 
 The goal of this exercise session is to:
 
 1. Find out how many cell types there are in the data set
-2. Annotate the cell types using FlyEnrichr (https://maayanlab.cloud/FlyEnrichr/)
+2. Annotate the cell types using [FlyEnrichr](https://maayanlab.cloud/FlyEnrichr/)
 
 # 1. Loading the data and create a Seurat object
+
+First, you need to download the dataset from the GitHub repository: [data.ENHPATHY.drosophila.melanogaster.txt.gz](https://github.com/DeplanckeLab/ENHPATHY4/blob/main/project_files/data.ENHPATHY.drosophila.melanogaster.txt.gz?raw=true) and store it on your computer, in a **path** that you will remember for the next script.
+
+> You don't need to unzip it for the script to run. But it's a good practice in general to check a file (format, content, headers) before trying to load it in R
 
 To be able to run the Seurat pipeline, you need to create a Seurat object in R.
 This step mainly depends on the format of the data you have, to start with. For example:

@@ -1,0 +1,27 @@
+/* Whole document: */
+body{
+  font-family: Arial;
+  font-size: 12pt;
+}
+/* Headers */
+h1,h2,h3,h4,h5,h6{
+  font-size: 20pt;
+}
+
+.author{
+  font-style: italic;
+  font-family: Arial;
+  font-size: 12pt;
+}
+
+.date{
+  font-style: italic;
+  font-family: Arial;
+  font-size: 12pt;
+}
+
+.title{
+  font-style: bold;
+  font-family: Arial;
+  font-size: 22pt;
+}
