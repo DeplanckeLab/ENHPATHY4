@@ -18,43 +18,6 @@ In this course, we will use an example data set consisting of 7,000 cells from t
 
 This set of 7,000 cells was carefully selected/filtered from the original **Body dataset** that consists of 96,926 cells. They belong to *a certain number* of differently annotated cell types.
 
-<div style="width:100%; height:150px; text-align: center">
-
-  <a href="/single-cell_sib_scilifelab_2021/project_spatial/README.html">
-  <div class="zoom" style="width:150px;height:100px;padding:5px 5px;font-size:12pt;font-family:Helvetica;float:left;text-align:center;">
-  <img border="0" height="100px" src="logos/spatial_transcriptomics.png"><br/>
-  Spatial<br/>transcriptomics
-  </div>
-  </a>
-
-  <a href="/single-cell_sib_scilifelab_2021/project_velocity/README.html">
-  <div class="zoom" style="width:150px;height:100px;padding:5px 5px;font-size:12pt;font-family:Helvetica;float:left;text-align:center;">
-  <img border="0" height="100px"  src="logos/rna_velocity.png"><br/>
-  RNA<br/>velocity
-  </div>
-  </a>
-
-  <a href="/single-cell_sib_scilifelab_2021/project_omics/README.html">
-  <div class="zoom" style="width:150px;height:100px;padding:5px 5px;font-size:12pt;font-family:Helvetica;float:left;text-align:center;">
-  <img border="0" height="100px"  src="logos/omics_integration.png"><br/>
-  Omics<br/>integration
-  </div>
-  </a>
-
-  <a href="/single-cell_sib_scilifelab_2021/project_dnn/README.html">
-  <div class="zoom" style="width:150px;height:100px;padding:5px 5px;font-size:12pt;font-family:Helvetica;float:left;text-align:center;">
-  <img border="0" height="100px" src="logos/deep_learning.png"><br/>
-  Deep<br/>learning
-  </div>
-  </a>
-
-</div>
-
-<br/>
-
-**Audience**
-This course is addressed to any participant, with or without knowledge of bioinformatics. The R coding is very light, and will be explained in details so that anybody should be able to adress the different questions.
-
 <br/>
 
 # <img border="0" src="https://www.svgrepo.com/show/20800/event-date-and-time-symbol.svg" width="40" height="40" style="vertical-align:middle;"> Date
