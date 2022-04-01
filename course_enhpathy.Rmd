@@ -11,7 +11,6 @@ output:
     toc_collapsed: true
     theme: lumen
     css: style.css
-    fig_width: 5
 editor_options: 
   chunk_output_type: console
 ---
@@ -20,6 +19,10 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
 library(BiocStyle)
 BiocStyle::markdown()
+
+knitr::knit_hooks$set(error = function(x, options) {
+  paste0("<pre style=\"color: red;\"><code>", x, "</code></pre>")
+})
 ```
 
 # Introduction
@@ -38,9 +41,29 @@ The goal of this exercise session is to:
 
 # 1. Loading the data and create a Seurat object
 
+## 1.1. Download the dataset
+
 First, you need to download the dataset from the GitHub repository: [data.ENHPATHY.drosophila.melanogaster.txt.gz](https://github.com/DeplanckeLab/ENHPATHY4/blob/main/project_files/data.ENHPATHY.drosophila.melanogaster.txt.gz?raw=true) and store it on your computer, in a **path** that you will remember for the next script.
 
-> You don't need to unzip it for the script to run. But it's a good practice in general to check a file (format, content, headers) before trying to load it in R
+> Note: You don't need to unzip it for the script to run. But it's a good practice in general to check a file (format, content, headers) before trying to load it in R
+
+Here, if you inspect the file, you should see something like that:
+
+```
+  Cell_1    Cell_2    Cell_3    Cell_4    Cell_5    Cell_6    Cell_7    Cell_8    Cell_9    Cell_10   ...
+128up   0   0   0   0   0   0   0   0   0   0   ...
+14-3-3epsilon   1   1   0   0   0   0   0   0   0   0   ...
+14-3-3zeta    2   2   1   2   1   3   0   0   2   2   ...
+140up   0   0   0   0   0   0   0   0   0   0   ...
+18SrRNA-Psi:CR41602   0   0   0   0   0   0   0   0   0   0   ...
+18w   0   0   0   0   0   0   0   1   1   0   ...
+...   ...   ...   ...   ...   ...   ...   ...   ...   ...   ...
+	
+```
+
+> Question: What do you see in this file? rows? columns? headers? separation? first column? values?
+
+## 1.2. Load the dataset in R
 
 To be able to run the Seurat pipeline, you need to create a Seurat object in R.
 This step mainly depends on the format of the data you have, to start with. For example:
@@ -50,14 +73,298 @@ This step mainly depends on the format of the data you have, to start with. For 
 3. If you ran CellRanger (10x libraries), then you end up with a folder containing .mtx and .tsv files
 4. If coming from your sequencing facility, it could still be in the form of .fastq or .bam. In this case, you cannot import the data in R yet, you need to finish preprocessing the files (i.e. run STARsolo or CellRanger)
 
-Here, the data is in **text format**: tab-separated, with header and row names.
+Here, the data is in **text format**.
 In this case, the first thing to do is to read your file in R and create a data.frame/matrix containing your object.
 Since the file is gzipped, and the file is big enough, we will use the package `data.table` to do so. Especially the `fread()` function in this package:
 
-```{r cars}
-summary(cars)
+```{r}
+library(data.table) # This states that you want to load all functions in this library, includind fread()
+# setwd("Path to your working directory, where you downloaded the dataset")
+data.enhpathy <- fread("data.ENHPATHY.drosophila.melanogaster.txt.gz", sep = "\t", data.table = F) 
 ```
+
+## 1.3. Check that the dataset was correctly loaded
+
+If the fread command fails, displaying the following error message, it means that you probably did not set correctly your working directory (`setwd` command, see the comment in the last code chunk).
+```{class="error"}
+Error in fread("data.ENHPATHY.drosophila.melanogaster.txt.gz") : 
+  File 'data.ENHPATHY.drosophila.melanogaster.txt.gz' does not exist or is non-readable. getwd()=='your_current_working_directory'
+```
+
+If not, then a new object called `data.enhpathy` should be created in the "Environment" tab at the top right of your Rstudio windows.
+The number of "obs. = observations" corresponds to the number of rows of your matrix, while the "variables" corresponds to the number of columns.
+
+> Note: If you click on the object, Rstudio will open a "View tab" to look at the content of you object. But be careful (maybe it's not a good idea here), because this object is very big, so it may be that your computer will not be able to open it.
+
+You can see some information about this object typing the following commands:
+```{r, eval = F}
+nrow(data.enhpathy)
+ncol(data.enhpathy)
+class(data.enhpathy)
+```
+
+Or even peak into its content (first 8 rows/8 cols)
+```{r}
+data.enhpathy[1:8, 1:8]
+```
+
+> Note: You can see that indexing in R starts at 1, not 0. Also it seems that first column is not set up correctly.
+
+A [`data.frame`](http://www.r-tutor.com/r-introduction/data-frame) object has `col.names` and `row.names` metadata attached to it, in addition to the main data matrix. In our case, `col.names` correctly contains the cell names, but `row.names` are empty. Indeed, instead of being in the metadata `row.names`, row names are in the first column of the data matrix, whose column name is default to `V1`. To solve the issue, we need to affect the row names with column 1 values, and then remove the first column of the `data.frame`.
+
+```{r, eval = T}
+row.names(data.enhpathy) <- data.enhpathy[,1]
+data.enhpathy <- data.enhpathy[,-1]
+data.enhpathy[1:8, 1:8] # Peaking at the new content of the data.frame
+```
+
+> Note: Now, the data.enhpathy object should be 12818 genes x 7000 cells
+
+## 1.4. Create the Seurat object using this loaded matrix of counts
+
+```{r, eval = T}
+library(Seurat)
+data.seurat <- CreateSeuratObject(counts = data.enhpathy, project = "ENHPATHY")
+data.seurat # Check the created variable
+```
+
+For the rest of the course, we will work on the Seurat object. Thus we can remove the original dataset from memory (clear some space).
+
+```{r, eval = T}
+rm(data.enhpathy)
+```
+
+# 2. First check of the cells, QC, filtering
+
+## 2.1 Creating a new metadata: percent.mt and attaching it to the Seurat object
+
+In datasets from the Fly Cell Atlases, gene nomenclature follows [FlyBase](https://flybase.org/) standards. In particular, mitochondrial gene names start with **mt:**.
+
+```{r, eval = T}
+rownames(data.seurat)[startsWith(rownames(data.seurat),"mt:")]
+```
+
+So we will create a new metadata called `percent.mt` that will contain, for each cell, the percentage of reads/UMIs that map to these "mt:" genes (vs all genes)
+
+```{r, eval = T}
+data.seurat[["percent.mt"]] <- PercentageFeatureSet(data.seurat, pattern = "^mt:")
+```
+
+Then, we will visualize it as a violin plot, along with two other (already pre-computed) metadata: 
+
+- `nFeature_RNA`: Number of detected genes (>0 reads) per cell
+- `nCount_RNA`: Number of reads/UMIs per cell
+
+```{r, eval = T}
+VlnPlot(data.seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+```
+
+
+## 2.2 Other types of QC visualization
+
+You can display any combination of the metadata as a scatter plot.
+
+```{r, eval = T}
+FeatureScatter(data.seurat, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+```
+
+## 2.3 Filtering aberrant cells
+
+You can use any combination of metadata / thresholds for filtering cells using the following **example** command line. Since thresholding is a bit arbitrary, I'll let you decide for our dataset.
+
+```{r, eval = F}
+data.seurat <- subset(data.seurat, subset = nFeature_RNA > 200 & nFeature_RNA < 2500)
+VlnPlot(data.seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+```
+
+# 3. Normalization
+
+We saw that cells aggregate different number of reads (also referred as `depth`). This is an issue for the next steps, as the genes will not be directly comparable between two cells, because of their varying depth.
+
+```{r, eval = T}
+data.enhpathy <- as.data.frame(data.seurat@assays$RNA@counts[, 1:20]) # Retrieve the count matrix from the Seurat object (20 first columns)
+barplot(colSums(data.enhpathy), las = 2, ylab = "Depth", main = "Depth before normalization") # Depth of 10 first cells
+```
+
+```{r, eval = T}
+data.seurat <- NormalizeData(data.seurat, normalization.method = "LogNormalize", scale.factor = 10000)
+```
+
+```{r, eval = T}
+data.enhpathy <- as.data.frame(data.seurat@assays$RNA@data[, 1:20]) # Retrieve the normalized matrix from the Seurat object (20 first columns)
+barplot(colSums(2^data.enhpathy), las = 2, ylab = "Depth", main = "Depth after normalization") # Depth of 10 first cells
+```
+
+# 4. Highly variable genes (HVG)
+
+We calculate a subset of features that exhibit high cell-to-cell variation in the dataset (i.e, they are highly expressed in some cells, and lowly expressed in others). These are likely to be the most interesting genes, indeed non-varying genes (even if highly expressed) do not bring any information on the heterogeneity / segregation between the cell types.
+
+Additionally, in some steps, restricting the calculation to only the HVG allows for:
+
+- Faster computation
+- Removing some noise in the data
+
+```{r, eval = T}
+data.seurat <- FindVariableFeatures(data.seurat, selection.method = "vst", nfeatures = 2000)
+```
+
+Usually, results are displayed as a scatter plot of gene expression vs gene variance. Indeed, one would expect that, because of technical bias, the lowly expressed is a gene, the more variable it is (noise).
+
+Seurat standardize the variance across expression levels, which allows for a common thresholding regardless of expression level. Then, it takes top 2000 (parameter) genes by standardized variance. 
+
+```{r, eval = T}
+# Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(data.seurat), 10)
+# plot variable features with and without labels
+LabelPoints(plot = VariableFeaturePlot(data.seurat), points = top10, repel = TRUE, xnudge = 0, ynudge = 0)
+```
+
+# 5. Scaling and regressing out covariates
+
+Seurat merged the Scaling and RegressOut function into a single function. This is a bit confusing, but it makes sense in terms of "order of the operations" => it does not allow the user to perform RegressOut on Scaled data for e.g., which would be wrong.
+
+## 5.1. Scaling
+
+In general, we simply scale the data, and do not regress covariates. Unless we know important covariates that are present in our data, and can prevent us to see the desired biological signal. For e.g. if the data was processed in batches, it could be useful to regress out these batches, to avoid this signal to be present in our final dataset. 
+
+```{r, eval = T}
+all.genes <- rownames(data.seurat) # Here I want to scale all genes. By default, only HVG genes are scaled (speed up computation)
+data.seurat <- ScaleData(data.seurat, features = all.genes)
+```
+
+## 5.2. Regress out covariates
+
+For e.g. if we have 3 batches in our dataset, it could be that the batch signal is stronger than the biological signal (cell types), and thus the UMAP/t-SNE/PCA plot shows 3 clusters, perfectly matching our batches, instead of separating the cells per cell type. In this case the batch covariate needs to be regressed out.
+
+In general a bioinformatician would first go to dimension reduction / clustering / differential expression, and then "ping-pong" back to this step, to filter any found covariate.
+
+If we want to regress out one (or multiple) covariates, we can use the following (for e.g. here, regressing out "percent.mt")
+
+```{r, eval = F}
+data.seurat <- ScaleData(data.seurat, features = all.genes, vars.to.regress = "percent.mt") # This step takes a bit of time to run since it needs to perform a linear regression on each gene, separately
+```
+
+> Note: The "regress out" step performs a simple linear regression, and return the residuals, which are then scaled
+
+# 6. PCA
+
+This step is crucial in the whole Seurat pipeline, since many of the downstream tools will use the PCA as input (UMAP, t-SNE, clustering). By default, the PCA is run only on the more meaningful features (HVG), both for removing noise, and for speeding up the computation.
+
+```{r, eval = T, echo = F}
+data.seurat <- RunPCA(data.seurat)
+DimPlot(data.seurat, reduction = "pca") # To visualize the results of the PCA
+```
+
+> Note: Selecting the correct number of principal components (PCs) from the PCA for downstream analysis can be helped using [JackStraw plots](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html#determine-the-dimensionality-of-the-dataset-1). We don't have time to elaborate on this today, but we recommend the reader to have a look at the Seurat tutorial for optimally selecting top X PCs that are significant.
+
+# 7. Visualization through t-SNE and UMAP
+
+Usually, for single-cell RNA-seq datasets, PCA is not very good at showing the complexity of the data in its two first components. Therefore, we are more likely to use dimension reduction techniques that are more tailored towards 2D visualization, such as t-SNE or UMAP. Both of these methods run directly on the PCA (not on the original scaled matrix).
+
+## 7.1. UMAP
+
+First, I'll run a UMAP.
+
+```{r, eval = T, echo = T}
+# Here I arbitrarily select 10 PCs from the PCA to run the UMAP/t-SNE. See the last Note, for a better explanation on how best to select the number of PCs
+data.seurat <- RunUMAP(data.seurat, dims = 1:10)
+DimPlot(data.seurat, reduction = "umap") # To visualize the results of the UMAP
+```
+
+## 7.2. t-SNE
+
+Then, I'll run a t-SNE.
+
+```{r, eval = T, echo = T}
+# Here I arbitrarily select 10 PCs from the PCA to run the UMAP/t-SNE. See the last Note, for a better explanation on how best to select the number of PCs
+data.seurat <- RunTSNE(data.seurat, dims = 1:10)
+DimPlot(data.seurat, reduction = "tsne") # To visualize the results of the UMAP
+```
+
+> Note: I would personally rely better on the UMAP results than the t-SNE, because UMAP preserves the distance inter-clusters. Also remember that both these methods are heuristics, i.e. if no random seed is set, running it twice can generate different results.
+
+# 8. Clustering
+
+You probably noticed that the previous plots did **NOT** show any clustering of the data (all cells are the same color). This is **because PCA, t-SNE and UMAP are NOT clustering methods, they are dimension reduction methods**. Now, we need to run a clustering method to be able to visualize predicted clusters.
+
+This is where things get very arbitrary, because a human viewer would like to better match the clusters to the UMAP/t-SNE representation. However, clustering methods are usually run on the PCA data, which may not match what we see in the UMAP/t-SNE. It would be wrong, though, to run the clustering on the UMAP / t-SNE data, as these two methods do not preserve the data structure and simplify the data (only 2 dimensions), because they are only meant for visualization.
+
+```{r, eval = T, echo = T}
+# Here I (again) arbitrarily select 10 PCs from the PCA
+data.seurat <- FindNeighbors(data.seurat, dims = 1:10)
+data.seurat <- FindClusters(data.seurat, resolution = 0.5) # this resolution factor can be tuned for matching the expectation/hypothesis of the user
+
+# Number of cells per cluster
+table(data.seurat$seurat_clusters)
+
+# Now the UMAP shows the cluster colors by default
+DimPlot(data.seurat, reduction = "umap") # To visualize the results of the UMAP
+```
+
+> Note: Is there 8 clusters in our data? It's difficult to say, so you can play with the resolution parameter to change its behaviour. Another way to know if 2 clusters can be merged together (or not), is to check the marker genes of these clusters (next step).
+
+# 9. Marker genes of our clusters
+
+We can check the top marker genes of one cluster (vs all other cells)
+
+```{r, eval = T, echo = T}
+# Find all markers of cluster 2
+cluster2.markers <- FindMarkers(data.seurat, only.pos = TRUE, ident.1 = 2, min.pct = 0.25, logfc.threshold = 0.25)
+cluster2.markers <- cluster2.markers[with(cluster2.markers, order(-avg_log2FC)),] # order by fold-change
+head(cluster2.markers, n = 10) # top 10
+```
+
+You can also run the function for all your clusters at once:
+
+```{r, eval = T, echo = T}
+all.markers <- FindAllMarkers(data.seurat, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+cluster2.markers <- subset(all.markers, cluster == 2) # Subsetting, to retrieve only the ones for cluster 2
+cluster2.markers <- cluster2.markers[with(cluster2.markers, order(-avg_log2FC)),] # order by fold-change
+head(cluster2.markers, n = 10) # top 10
+```
+
+And we can visualize the expression of the top DE genes found for cluster 2 across all clusters:
+
+```{r, eval = T, echo = T}
+VlnPlot(data.seurat, features = c("Six4", "eya", "stg", "Gmap", "apt", "CG12535"))
+```
+
+Or as gene expression gradient within our UMAP / t-SNE visualization:
+
+```{r, eval = T, echo = T}
+FeaturePlot(data.seurat, features = c("Six4", "eya", "stg", "Gmap", "apt", "CG12535"))
+```
+
+# 10. Annotating the clusters
+
+This is the final and most tedious task to do, since it often requires manual check of the DE genes, and some expert knowledge:
+
+- we need to identify the best clustering output (# clusters, biological relevance vs DE genes)
+- we can perform geneset enrichment analysis to functionally explain top DE genes, for e.g. using [FlyEnrichr](https://maayanlab.cloud/FlyEnrichr/) or check the genes individually for e.g. using [FlyBase](https://flybase.org/)
+- [Recommended] we can also use the Fly Cell Atlas to annotate our clusters, whether using [SCope](https://scope.aertslab.org/#/FlyCellAtlas/FlyCellAtlas%2Fs_fca_biohub_body_10x.loom/gene) or [ASAP](https://asap.epfl.ch/projects/ASAP44)
+
+Once all cell types are identified, we can display them on the UMAP:
+
+```{r, eval = T, echo = T}
+new.cluster.ids <- c("Cluster 0", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4", "Cluster 5", "Cluster 6", "Cluster 7")
+names(new.cluster.ids) <- levels(data.seurat)
+data.seurat <- RenameIdents(data.seurat, new.cluster.ids)
+DimPlot(data.seurat, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+```
+
+> Note 1: The DE genes found for each cluster vastly depend on the background cells (the other clusters). Which means that if you have only a subset of cell types in your dataset, you may find many DE genes that seem to be specific to your cluster of interest, simply because they are not expressed in the other clusters (but could be expressed in other cell types, if they are not present in your dataset)
+> Note 2: There are methods for automatic prediction of clusters based on curated marker genes database (for e.g. [Garnett](https://cole-trapnell-lab.github.io/garnett/papers/)), but they are not yet perfect (especially for rare cell types) and don't have curated database for all species/tissues
+> Note 3: There is also a growing amounf of studies that rather perform "integration" of cell atlases with their dataset, in order to see which annotated cell types their cluster would match. This requires specific integration step at the beginning of the project using [Seurat integration method](https://satijalab.org/seurat/articles/integration_introduction.html) or external methods such as [Harmony](https://www.nature.com/articles/s41592-019-0619-0)
 
 # Conclusion
 
 Of course, it is possible to run this whole analysis in R without using the Seurat framework. An online book, ["Orchestrating single-cell analysis with Bioconductor"](https://osca.bioconductor.org/), is an excellent resource for performing this.
+
+```{r, eval = F, echo = F}
+# Solution
+data.annotation <- fread("data.ENHPATHY.drosophila.melanogaster.metadata.txt", data.table = F)
+rownames(data.annotation) <- data.annotation$cell_names
+data.seurat[["annotation"]] <- data.annotation[colnames(data.seurat), "annotation"]
+
+DimPlot(data.seurat, reduction = "umap", group.by = "annotation")
+```
