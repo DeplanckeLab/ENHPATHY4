@@ -62,7 +62,7 @@ At the end of this session, the participants should be able to:
 - Intermediate/advanced usage of R is a plus
 
 **Pre-requisites - material & software**
-- The participants must use a laptop with install permissions (admin). R and Rstudio should be installed on their machine. A list of packages to be installed will be communicated during the course, it includes the following:
+- The participants must use a laptop with install permissions (admin). R and Rstudio should be installed on their machine. Two packages need to be installed, with their dependencies:
 ```r
 install.packages("Seurat")
 install.packages("data.table")
