@@ -1,5 +1,5 @@
 # ENHPATHY Event IV - Hands-on session on analyzing single-cell data
-EPFL course by Vincent Gardeux
+EPFL course by Vincent Gardeux 
 
 ***
 
